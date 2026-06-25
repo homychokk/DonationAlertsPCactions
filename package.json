@@ -1,0 +1,22 @@
+{
+  "name": "donationalerts-pc-actions",
+  "version": "1.0.0",
+  "description": "Trigger local PC actions and play YouTube tracks on stream donation events",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "donationalerts",
+    "automation",
+    "obs",
+    "stream"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "obs-websocket-js": "^5.0.8",
+    "ws": "^8.17.0"
+  }
+}

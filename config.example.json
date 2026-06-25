@@ -1,0 +1,59 @@
+{
+  "clientId": "",
+  "clientSecret": "",
+  "accessToken": "",
+  "refreshToken": "",
+  "tokenExpiry": 0,
+  "obs": {
+    "address": "ws://127.0.0.1:4455",
+    "password": ""
+  },
+  "currentGame": "deadlock",
+  "games": [
+    "deadlock",
+    "cs2",
+    "dota2",
+    "minecraft",
+    "gta5",
+    "apex",
+    "rust"
+  ],
+  "actions": [
+    {
+      "id": "action-1",
+      "name": "Инверсия мыши на 10 секунд",
+      "minAmount": 10,
+      "currency": "RUB",
+      "keyword": "",
+      "type": "system_mouse_invert",
+      "enabled": true,
+      "game": "all",
+      "youtubeQuery": "",
+      "youtubeVideoUrl": "",
+      "command": "",
+      "crazyKey": "",
+      "normalKey": "",
+      "durationMs": 10000,
+      "keys": "",
+      "streamerBotAction": ""
+    },
+    {
+      "id": "action-2",
+      "name": "Нажать F",
+      "minAmount": 25,
+      "currency": "RUB",
+      "keyword": "",
+      "type": "press_keys",
+      "enabled": true,
+      "game": "all",
+      "youtubeQuery": "",
+      "youtubeVideoUrl": "",
+      "command": "",
+      "crazyKey": "",
+      "normalKey": "",
+      "durationMs": 5000,
+      "keys": "f",
+      "streamerBotAction": ""
+    }
+  ]
+}

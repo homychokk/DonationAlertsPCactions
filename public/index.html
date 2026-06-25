@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Donation Action Hub - Автоматизация стрима</title>
+  <meta name="description" content="Управляйте своим ПК и запускайте треки на YouTube во время донатов с DonationAlerts">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090714;
+      --card-bg: rgba(22, 17, 43, 0.45);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f1fe;
+      --text-muted: #9e97c2;
+      
+      --primary: #8a4fff;
+      --primary-hover: #a173ff;
+      --primary-glow: rgba(138, 79, 255, 0.4);
+      
+      --accent-cyan: #00f2fe;
+      --accent-magenta: #ff007f;
+      
+      --status-connected: #00e676;
+      --status-connecting: #ffeb3b;
+      --status-disconnected: #ff1744;
+      --status-error: #d50000;
+      
+      --font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 10% 20%, #171131 0%, var(--bg-dark) 80%);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Animated background glow elements */
+    .glow-bg {
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, var(--primary-glow) 0%, rgba(0,0,0,0) 70%);
+      top: -100px;
+      left: -100px;
+      z-index: -1;
+      filter: blur(50px);
+      pointer-events: none;
+      animation: floatGlow 15s ease-in-out infinite alternate;
+    }
+
+    .glow-bg-2 {
+      position: absolute;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(0, 242, 254, 0.15) 0%, rgba(0,0,0,0) 70%);
+      bottom: -150px;
+      right: -100px;
+      z-index: -1;
+      filter: blur(60px);
+      pointer-events: none;
+      animation: floatGlow 20s ease-in-out infinite alternate-reverse;
+    }
+
+    @keyframes floatGlow {
+      0% { transform: translate(0, 0) scale(1); }
+      100% { transform: translate(50px, 50px) scale(1.1); }
+    }
+
+    header {
+      backdrop-filter: blur(12px);
+      background: rgba(9, 7, 20, 0.6);
+      border-bottom: 1px solid var(--card-border);
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--accent-cyan));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1.5rem;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    h1 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #ffffff, #d2c9ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background-color: var(--status-disconnected);
+      box-shadow: 0 0 10px var(--status-disconnected);
+    }
+
+    .status-dot.connected {
+      background-color: var(--status-connected);
+      box-shadow: 0 0 10px var(--status-connected);
+    }
+
+    .status-dot.connecting {
+      background-color: var(--status-connecting);
+      box-shadow: 0 0 10px var(--status-connecting);
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-dot.error {
+      background-color: var(--status-error);
+      box-shadow: 0 0 10px var(--status-error);
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    .profile-card {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 4px 12px 4px 4px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .profile-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1.5px solid var(--primary);
+    }
+
+    .profile-name {
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem;
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      padding: 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease, border-color 0.3s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(138, 79, 255, 0.2);
+    }
+
+    h2 {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      padding-bottom: 0.8rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    input, select, textarea {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #fff;
+      font-family: var(--font-family);
+      font-size: 0.9rem;
+      transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+      outline: none;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      border-color: var(--primary);
+      background: rgba(255, 255, 255, 0.07);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .btn {
+      background: linear-gradient(135deg, var(--primary), #6d24ff);
+      color: #fff;
+      border: none;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(138, 79, 255, 0.6);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      box-shadow: none;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ef5350, #b71c1c);
+      box-shadow: 0 4px 15px rgba(239, 83, 80, 0.3);
+    }
+
+    .btn-danger:hover {
+      box-shadow: 0 6px 20px rgba(239, 83, 80, 0.5);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, #66bb6a, #2e7d32);
+      box-shadow: 0 4px 15px rgba(102, 187, 106, 0.3);
+    }
+
+    .btn-success:hover {
+      box-shadow: 0 6px 20px rgba(102, 187, 106, 0.5);
+    }
+
+    .auth-btn-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .help-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Actions List Styling */
+    .actions-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .action-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .action-item.disabled {
+      opacity: 0.6;
+    }
+
+    .action-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      padding-bottom: 8px;
+    }
+
+    .action-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .action-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+    }
+
+    .action-dynamic {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 10px;
+      padding: 10px;
+      border: 1px dashed rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Switch toggle */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.15);
+      transition: .4s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+
+    input:focus + .slider {
+      box-shadow: 0 0 1px var(--primary);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    .delete-action-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .delete-action-btn:hover {
+      color: var(--status-disconnected);
+      background: rgba(255, 23, 68, 0.1);
+    }
+
+    .add-action-btn-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    /* Log section style */
+    .logs-panel {
+      grid-column: 1 / -1;
+    }
+
+    .logs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .logs-content {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      height: 250px;
+      overflow-y: auto;
+      padding: 12px 16px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .log-line {
+      display: flex;
+      gap: 10px;
+      word-break: break-all;
+    }
+
+    .log-time {
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .log-msg {
+      color: #eee;
+    }
+
+    .log-line.success .log-msg { color: #81c784; }
+    .log-line.error .log-msg { color: #e57373; font-weight: bold; }
+    .log-line.warning .log-msg { color: #ffd54f; }
+    .log-line.donation .log-msg { color: #00e5ff; font-weight: bold; }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0,0,0,0.1);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255,255,255,0.2);
+    }
+
+    /* Tab Buttons CSS */
+    .tab-btn {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+      border: 1px solid var(--card-border);
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-family: var(--font-family);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      transform: translateY(-1px);
+    }
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--primary), #6d24ff);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+    
+    .tab-btn.active:hover {
+      background: linear-gradient(135deg, var(--primary-hover), #7b38ff);
+      box-shadow: 0 6px 20px rgba(138, 79, 255, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <div class="glow-bg"></div>
+  <div class="glow-bg-2"></div>
+
+  <header>
+    <div class="logo-container">
+      <div class="logo-icon">▲</div>
+      <h1>Donation Action Hub</h1>
+    </div>
+    <div class="header-status">
+      <div id="profile-container" class="profile-card" style="display: none;">
+        <img id="profile-avatar" class="profile-avatar" src="" alt="Avatar">
+        <span id="profile-name" class="profile-name">Streamer</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; margin-right: 8px;">
+        <label for="current-game-select" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); cursor: pointer;">Игра:</label>
+        <select id="current-game-select" style="background: rgba(255, 255, 255, 0.06); border: 1px solid var(--card-border); padding: 6px 14px; border-radius: 50px; font-size: 0.85rem; font-weight: 600; color: #fff; cursor: pointer; outline: none; transition: border-color 0.3s;">
+          <!-- Опции будут загружены динамически -->
+        </select>
+      </div>
+      <div class="status-badge">
+        <div id="status-dot" class="status-dot"></div>
+        <span id="status-text">Загрузка...</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs Navigation -->
+  <div style="display: flex; gap: 15px; margin: 1.5rem auto 0 auto; max-width: 1400px; width: 100%; padding: 0 2rem;">
+    <button id="tab-dashboard-btn" class="tab-btn active">🎮 Управление триггерами</button>
+    <button id="tab-settings-btn" class="tab-btn">⚙️ Настройки DonationAlerts</button>
+  </div>
+
+  <!-- Tab 1: Dashboard -->
+  <main id="tab-content-dashboard">
+    <!-- Left Column: Test Tools -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+      <!-- Simulator Card -->
+      <div class="card">
+        <h2>🧪 Симулятор Доната</h2>
+        <p class="help-text" style="margin-top: -10px;">Проверьте работу ваших триггеров без реального отправления средств.</p>
+        
+        <div class="form-group">
+          <label for="sim-amount">Сумма доната</label>
+          <input type="number" id="sim-amount" value="50" min="1">
+        </div>
+
+        <div class="form-group">
+          <label for="sim-username">Имя отправителя</label>
+          <input type="text" id="sim-username" value="Зритель">
+        </div>
+
+        <div class="form-group">
+          <label for="sim-message">Сообщение</label>
+          <input type="text" id="sim-message" value="Включи крутой трек!">
+        </div>
+
+        <div class="form-group">
+          <label for="sim-delay">Задержка запуска (сек)</label>
+          <input type="number" id="sim-delay" value="5" min="0" max="60">
+        </div>
+
+        <button id="simulate-btn" class="btn btn-success">🚀 Запустить тест</button>
+      </div>
+    </div>
+
+    <!-- Right Column: Actions Editor -->
+    <div style="display: flex; flex-direction: column; gap: 2rem;">
+      <div class="card" style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding-bottom: 0.8rem;">
+          <h2 style="border-bottom: none; padding-bottom: 0;">⚙️ Триггеры и действия</h2>
+          <button id="save-actions-btn" class="btn btn-success" style="padding: 10px 18px; font-size: 0.85rem;">💾 Сохранить триггеры</button>
+        </div>
+
+        <div id="actions-list" class="actions-list">
+          <!-- Action items will be populated here -->
+        </div>
+
+        <div class="add-action-btn-container">
+          <button id="add-action-btn" class="btn btn-secondary" style="border: 1.5px dashed rgba(255,255,255,0.15); width: 100%; border-radius: 12px; background: transparent;">
+            ➕ Добавить новое действие
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logs panel spanning full width -->
+    <div class="card logs-panel">
+      <div class="logs-header">
+        <h2>📋 Лог работы системы</h2>
+        <button id="clear-logs-btn" class="btn btn-secondary" style="padding: 8px 14px; font-size: 0.8rem;">Очистить логи</button>
+      </div>
+      <div id="logs-container" class="logs-content">
+        <!-- Logs loaded here -->
+        <div class="log-line"><span class="log-time">00:00:00</span> <span class="log-msg">Загрузка логов...</span></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Tab 2: Settings -->
+  <div id="tab-content-settings" style="display: none; max-width: 600px; margin: 2rem auto; padding: 0 2rem;">
+    <!-- Credentials Settings Card -->
+    <div class="card">
+      <h2>🔑 Настройки DonationAlerts</h2>
+      
+      <div class="form-group">
+        <label for="client-id">Client ID приложения</label>
+        <input type="text" id="client-id" placeholder="Получите в кабинете разработчика">
+      </div>
+
+      <div class="form-group">
+        <label for="client-secret">Client Secret приложения</label>
+        <input type="password" id="client-secret" placeholder="••••••••">
+      </div>
+
+      <button id="save-settings-btn" class="btn btn-secondary">Сохранить настройки</button>
+
+      <div class="auth-btn-container">
+        <a href="/auth" target="_blank" style="text-decoration: none; width: 100%;">
+          <button id="auth-btn" class="btn" style="width: 100%;">🔗 Подключить DonationAlerts</button>
+        </a>
+        <span class="help-text">
+          Перед нажатием убедитесь, что вы сохранили Client ID и Client Secret, а в личном кабинете DonationAlerts указали Redirect URI: <code>http://localhost:3000/auth/callback</code>
+        </span>
+      </div>
+    </div>
+
+    <!-- Games Management Card -->
+    <div class="card" style="margin-top: 2rem;">
+      <h2>🎮 Управление списком игр</h2>
+      <p class="help-text" style="margin-top: -10px;">Добавляйте или удаляйте игры. Для этих игр вы сможете настраивать отдельные действия.</p>
+      
+      <div id="games-list-container" style="display: flex; flex-direction: column; gap: 8px; max-height: 200px; overflow-y: auto; padding: 8px; background: rgba(0,0,0,0.2); border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+        <!-- Список игр загружается динамически -->
+      </div>
+      
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <input type="text" id="new-game-input" placeholder="Название новой игры (например, Witcher 3)" style="flex: 1;">
+        <button id="add-game-btn" class="btn btn-success" style="padding: 12px 20px;">Добавить</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let actions = [];
+    let games = ['deadlock', 'cs2', 'dota2', 'minecraft', 'gta5', 'apex', 'rust'];
+
+    function getGameDisplayName(gameKey) {
+      const mapping = {
+        'deadlock': 'Deadlock',
+        'cs2': 'Counter-Strike 2',
+        'dota2': 'Dota 2',
+        'minecraft': 'Minecraft',
+        'gta5': 'GTA V',
+        'apex': 'Apex Legends',
+        'rust': 'Rust',
+        'other': 'Другая игра'
+      };
+      return mapping[gameKey] || gameKey;
+    }
+
+    // DOM Elements
+    const clientIdInput = document.getElementById('client-id');
+    const clientSecretInput = document.getElementById('client-secret');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    const simulateBtn = document.getElementById('simulate-btn');
+    const saveActionsBtn = document.getElementById('save-actions-btn');
+    const addActionBtn = document.getElementById('add-action-btn');
+    const actionsListContainer = document.getElementById('actions-list');
+    const logsContainer = document.getElementById('logs-container');
+    const clearLogsBtn = document.getElementById('clear-logs-btn');
+    const currentGameSelect = document.getElementById('current-game-select');
+    
+    const statusDot = document.getElementById('status-dot');
+    const statusText = document.getElementById('status-text');
+    const profileContainer = document.getElementById('profile-container');
+    const profileAvatar = document.getElementById('profile-avatar');
+    const profileName = document.getElementById('profile-name');
+
+    const tabDashboardBtn = document.getElementById('tab-dashboard-btn');
+    const tabSettingsBtn = document.getElementById('tab-settings-btn');
+    const dashboardContent = document.getElementById('tab-content-dashboard');
+    const settingsContent = document.getElementById('tab-content-settings');
+
+    const gamesListContainer = document.getElementById('games-list-container');
+    const newGameInput = document.getElementById('new-game-input');
+    const addGameBtn = document.getElementById('add-game-btn');
+
+    if (tabDashboardBtn && tabSettingsBtn && dashboardContent && settingsContent) {
+      tabDashboardBtn.addEventListener('click', () => {
+        tabDashboardBtn.classList.add('active');
+        tabSettingsBtn.classList.remove('active');
+        dashboardContent.style.display = 'grid';
+        settingsContent.style.display = 'none';
+      });
+
+      tabSettingsBtn.addEventListener('click', () => {
+        tabSettingsBtn.classList.add('active');
+        tabDashboardBtn.classList.remove('active');
+        dashboardContent.style.display = 'none';
+        settingsContent.style.display = 'block';
+        renderGamesSettingsList();
+      });
+    }
+
+    function populateCurrentGameSelect() {
+      if (!currentGameSelect) return;
+      const prevValue = currentGameSelect.value;
+      currentGameSelect.innerHTML = `
+        ${games.map(g => `<option value="${g}" style="background: #090714; color: #fff;">${getGameDisplayName(g)}</option>`).join('')}
+        ${!games.includes('other') ? `<option value="other" style="background: #090714; color: #fff;">Другая игра</option>` : ''}
+      `;
+      if (games.includes(prevValue) || prevValue === 'other') {
+        currentGameSelect.value = prevValue;
+      } else {
+        currentGameSelect.value = games[0] || 'other';
+      }
+    }
+
+    function renderGamesSettingsList() {
+      if (!gamesListContainer) return;
+      gamesListContainer.innerHTML = '';
+      
+      games.forEach((game) => {
+        const gameItem = document.createElement('div');
+        gameItem.style.display = 'flex';
+        gameItem.style.justify = 'space-between';
+        gameItem.style.alignItems = 'center';
+        gameItem.style.padding = '8px 12px';
+        gameItem.style.background = 'rgba(255, 255, 255, 0.03)';
+        gameItem.style.border = '1px solid rgba(255, 255, 255, 0.05)';
+        gameItem.style.borderRadius = '8px';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = getGameDisplayName(game);
+        nameSpan.style.fontSize = '0.9rem';
+        nameSpan.style.fontWeight = '500';
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.style.background = 'none';
+        deleteBtn.style.border = 'none';
+        deleteBtn.style.cursor = 'pointer';
+        deleteBtn.style.fontSize = '0.9rem';
+        deleteBtn.style.padding = '4px';
+        deleteBtn.style.borderRadius = '6px';
+        deleteBtn.style.transition = 'all 0.2s';
+        
+        deleteBtn.addEventListener('mouseenter', () => {
+          deleteBtn.style.background = 'rgba(255, 23, 68, 0.1)';
+        });
+        deleteBtn.addEventListener('mouseleave', () => {
+          deleteBtn.style.background = 'none';
+        });
+        
+        deleteBtn.addEventListener('click', async () => {
+          if (confirm(`Вы уверены, что хотите удалить игру "${getGameDisplayName(game)}"? Это не удалит связанные триггеры, но они не будут отображаться пока вы снова не добавите игру.`)) {
+            games = games.filter(g => g !== game);
+            await saveGamesList();
+            renderGamesSettingsList();
+            populateCurrentGameSelect();
+            renderActions();
+          }
+        });
+        
+        gameItem.appendChild(nameSpan);
+        gameItem.appendChild(deleteBtn);
+        gamesListContainer.appendChild(gameItem);
+      });
+    }
+
+    async function saveGamesList() {
+      try {
+        const response = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            games: games
+          })
+        });
+        const res = await response.json();
+        if (!res.success) {
+          console.error('Failed to save games list');
+        }
+      } catch (err) {
+        console.error('Error saving games list:', err);
+      }
+    }
+
+    if (addGameBtn && newGameInput) {
+      addGameBtn.addEventListener('click', async () => {
+        const name = newGameInput.value.trim();
+        if (!name) return;
+        
+        const lowerGames = games.map(g => g.toLowerCase());
+        if (lowerGames.includes(name.toLowerCase())) {
+          alert('Игра с таким названием уже добавлена!');
+          return;
+        }
+        
+        games.push(name);
+        newGameInput.value = '';
+        await saveGamesList();
+        renderGamesSettingsList();
+        populateCurrentGameSelect();
+        renderActions();
+      });
+    }
+
+    // Load credentials and config
+    async function loadConfig() {
+      try {
+        const response = await fetch('/api/config');
+        const data = await response.json();
+        clientIdInput.value = data.clientId || '';
+        clientSecretInput.value = data.clientSecret || '';
+        
+        games = data.games || ['deadlock', 'cs2', 'dota2', 'minecraft', 'gta5', 'apex', 'rust'];
+        populateCurrentGameSelect();
+        
+        if (currentGameSelect) {
+          currentGameSelect.value = data.currentGame || 'deadlock';
+        }
+        
+        renderGamesSettingsList();
+        actions = data.actions || [];
+        renderActions();
+      } catch (err) {
+        console.error('Failed to load config:', err);
+      }
+    }
+
+    // Save credentials
+    saveSettingsBtn.addEventListener('click', async () => {
+      try {
+        const response = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            clientId: clientIdInput.value,
+            clientSecret: clientSecretInput.value
+          })
+        });
+        const res = await response.json();
+        if (res.success) {
+          alert('Настройки сохранены!');
+        }
+      } catch (err) {
+        alert('Ошибка при сохранении: ' + err.message);
+      }
+    });
+
+    // Save current game
+    if (currentGameSelect) {
+      currentGameSelect.addEventListener('change', async () => {
+        const selectedGame = currentGameSelect.value;
+        filterActionsByActiveGame();
+        try {
+          const response = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              currentGame: selectedGame
+            })
+          });
+          const res = await response.json();
+          if (!res.success) {
+            console.error('Failed to save game selection');
+          }
+        } catch (err) {
+          console.error('Error saving game selection:', err);
+        }
+      });
+    }
+
+    // Save actions
+    saveActionsBtn.addEventListener('click', async () => {
+      // Collect values from DOM elements
+      const items = actionsListContainer.querySelectorAll('.action-item');
+      const updatedActions = [];
+
+      items.forEach((item) => {
+        const id = item.dataset.id;
+        const name = item.querySelector('.action-name-input').value;
+        const minAmount = Number(item.querySelector('.action-min-amount').value);
+        const currency = item.querySelector('.action-currency').value;
+        const keyword = item.querySelector('.action-keyword').value;
+        const type = item.querySelector('.action-type').value;
+        const enabled = item.querySelector('.action-enable-toggle').checked;
+        const game = item.querySelector('.action-game').value;
+
+        const youtubeQuery = item.querySelector('.action-yt-query')?.value || '';
+        const youtubeVideoUrl = item.querySelector('.action-yt-url')?.value || '';
+        const command = item.querySelector('.action-cmd')?.value || '';
+        const crazyKey = item.querySelector('.action-crazy-key')?.value || '';
+        const normalKey = item.querySelector('.action-normal-key')?.value || '';
+        const durationMs = Number(item.querySelector('.action-duration-ms')?.value) || 5000;
+        const keys = item.querySelector('.action-keys')?.value || '';
+        const streamerBotAction = item.querySelector('.action-streamerbot-action')?.value || '';
+
+        updatedActions.push({
+          id,
+          name,
+          minAmount,
+          currency,
+          keyword,
+          type,
+          enabled,
+          game,
+          youtubeQuery,
+          youtubeVideoUrl,
+          command,
+          crazyKey,
+          normalKey,
+          durationMs,
+          keys,
+          streamerBotAction
+        });
+      });
+
+      actions = updatedActions;
+
+      try {
+        const response = await fetch('/api/actions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ actions })
+        });
+        const res = await response.json();
+        if (res.success) {
+          alert('Действия сохранены!');
+          renderActions();
+        }
+      } catch (err) {
+        alert('Ошибка при сохранении действий: ' + err.message);
+      }
+    });
+
+    // Render Actions List
+    function renderActions() {
+      actionsListContainer.innerHTML = '';
+      
+      if (actions.length === 0) {
+        actionsListContainer.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 20px;">Нет настроенных действий. Создайте новое!</div>';
+        return;
+      }
+
+      actions.forEach((action) => {
+        const item = document.createElement('div');
+        item.className = `action-item ${action.enabled ? '' : 'disabled'}`;
+        item.dataset.id = action.id;
+
+        const actionGame = action.game || (action.type === 'press_binds' || action.type === 'press_keys' ? 'deadlock' : 'all');
+
+        item.innerHTML = `
+          <div class="action-header">
+            <div class="action-title">
+              <input type="text" class="action-name-input" value="${action.name || ''}" style="background:transparent; border:none; padding:4px 8px; font-weight:600; width: 250px;" placeholder="Имя действия">
+            </div>
+            <div class="action-controls">
+              <label class="switch">
+                <input type="checkbox" class="action-enable-toggle" ${action.enabled ? 'checked' : ''}>
+                <span class="slider"></span>
+              </label>
+              <button class="delete-action-btn" title="Удалить">🗑️</button>
+            </div>
+          </div>
+          
+          <div class="action-grid">
+            <div class="form-group">
+              <label>Мин. Сумма</label>
+              <input type="number" class="action-min-amount" value="${action.minAmount || 0}" min="0">
+            </div>
+            <div class="form-group">
+              <label>Валюта</label>
+              <select class="action-currency">
+                <option value="RUB" ${action.currency === 'RUB' ? 'selected' : ''}>RUB (₽)</option>
+                <option value="USD" ${action.currency === 'USD' ? 'selected' : ''}>USD ($)</option>
+                <option value="EUR" ${action.currency === 'EUR' ? 'selected' : ''}>EUR (€)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Ключевое слово в тексте</label>
+              <input type="text" class="action-keyword" value="${action.keyword || ''}" placeholder="Необязательно">
+            </div>
+            <div class="form-group">
+              <label>Тип действия</label>
+              <select class="action-type">
+                <option value="youtube" ${action.type === 'youtube' ? 'selected' : ''}>YouTube Трек</option>
+                <option value="command" ${action.type === 'command' ? 'selected' : ''}>Запуск программы / Команда</option>
+                <option value="press_binds" ${action.type === 'press_binds' ? 'selected' : ''}>Нажатие клавиш (бинды с возвратом)</option>
+                <option value="press_keys" ${action.type === 'press_keys' ? 'selected' : ''}>Просто нажатие клавиш</option>
+                <option value="streamerbot" ${action.type === 'streamerbot' ? 'selected' : ''}>Действие Streamer.bot</option>
+                <option value="system_mouse_invert" ${action.type === 'system_mouse_invert' ? 'selected' : ''}>Инверсия мыши (Windows)</option>
+                <option value="system_mouse_speed" ${action.type === 'system_mouse_speed' ? 'selected' : ''}>Увеличить сенсу (Windows)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Для игры</label>
+              <select class="action-game">
+                <option value="all" ${actionGame === 'all' ? 'selected' : ''}>Все игры</option>
+                ${games.map(g => `<option value="${g}" ${actionGame === g ? 'selected' : ''}>${getGameDisplayName(g)}</option>`).join('')}
+                ${!games.includes('other') ? `<option value="other" ${actionGame === 'other' ? 'selected' : ''}>Другая игра</option>` : ''}
+              </select>
+            </div>
+          </div>
+
+          <div class="action-dynamic">
+            <!-- Dynamic fields depending on Action Type -->
+          </div>
+        `;
+
+        // Toggle class on switch update
+        const toggle = item.querySelector('.action-enable-toggle');
+        toggle.addEventListener('change', () => {
+          if (toggle.checked) {
+            item.classList.remove('disabled');
+          } else {
+            item.classList.add('disabled');
+          }
+        });
+
+        // Delete button
+        item.querySelector('.delete-action-btn').addEventListener('click', () => {
+          if (confirm('Вы уверены, что хотите удалить этот триггер?')) {
+            item.remove();
+          }
+        });
+
+        // Set dynamic fields based on type
+        const typeSelect = item.querySelector('.action-type');
+        const dynamicContainer = item.querySelector('.action-dynamic');
+
+        function updateDynamicFields() {
+          const type = typeSelect.value;
+          if (type === 'youtube') {
+            dynamicContainer.innerHTML = `
+              <div class="form-group">
+                <label>Поиск в YouTube (например: "metallica master of puppets")</label>
+                <input type="text" class="action-yt-query" value="${action.youtubeQuery || ''}" placeholder="Введите поисковый запрос">
+              </div>
+              <div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; margin: 4px 0;">ИЛИ</div>
+              <div class="form-group">
+                <label>Прямая ссылка на YouTube видео</label>
+                <input type="text" class="action-yt-url" value="${action.youtubeVideoUrl || ''}" placeholder="https://www.youtube.com/watch?v=...">
+              </div>
+            `;
+          } else if (type === 'command') {
+            dynamicContainer.innerHTML = `
+              <div class="form-group">
+                <label>Команда для выполнения на ПК</label>
+                <input type="text" class="action-cmd" value="${action.command || ''}" placeholder="Например: calc.exe или run_script.bat">
+              </div>
+            `;
+          } else if (type === 'press_binds') {
+            dynamicContainer.innerHTML = `
+              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                  <label>Клавиша триггера (crazyKey)</label>
+                  <input type="text" class="action-crazy-key" value="${action.crazyKey || ''}" placeholder="Например: {F11}">
+                </div>
+                <div class="form-group">
+                  <label>Клавиша возврата (normalKey)</label>
+                  <input type="text" class="action-normal-key" value="${action.normalKey || ''}" placeholder="Например: {F10}">
+                </div>
+                <div class="form-group">
+                  <label>Задержка (мс)</label>
+                  <input type="number" class="action-duration-ms" value="${action.durationMs || 5000}" min="100">
+                </div>
+              </div>
+              <span class="help-text">Скрипт нажмет клавишу триггера, подождет задержку и нажмет клавишу возврата. Для фигурных скобок используйте SendKeys синтаксис (например, {F11}, {ENTER}).</span>
+            `;
+          } else if (type === 'press_keys') {
+            dynamicContainer.innerHTML = `
+              <div class="form-group">
+                <label>Последовательность клавиш</label>
+                <input type="text" class="action-keys" value="${action.keys || ''}" placeholder="Например: f или {F7}disconnect{ENTER}">
+              </div>
+              <span class="help-text">Последовательность клавиш для отправки в активное окно.</span>
+            `;
+          } else if (type === 'streamerbot') {
+            dynamicContainer.innerHTML = `
+              <div class="form-group">
+                <label>Название действия в Streamer.bot</label>
+                <input type="text" class="action-streamerbot-action" value="${action.streamerBotAction || ''}" placeholder="Например: MyObsTrigger">
+              </div>
+              <span class="help-text">Действие будет отправлено по HTTP запросу на http://127.0.0.1:8080/DoAction.</span>
+            `;
+          } else if (type === 'system_mouse_invert' || type === 'system_mouse_speed') {
+            const desc = type === 'system_mouse_invert' 
+              ? 'Включает инверсию мыши в Windows на заданное время.' 
+              : 'Увеличивает чувствительность мыши в Windows до максимума (20) на заданное время.';
+            dynamicContainer.innerHTML = `
+              <div class="form-group">
+                <label>Длительность (мс)</label>
+                <input type="number" class="action-duration-ms" value="${action.durationMs || 5000}" min="100">
+              </div>
+              <span class="help-text">${desc}</span>
+            `;
+          }
+        }
+
+        typeSelect.addEventListener('change', updateDynamicFields);
+        updateDynamicFields();
+
+        const gameSelect = item.querySelector('.action-game');
+        if (gameSelect) {
+          gameSelect.addEventListener('change', () => {
+            filterActionsByActiveGame();
+          });
+        }
+
+        actionsListContainer.appendChild(item);
+      });
+      filterActionsByActiveGame();
+    }
+
+    function filterActionsByActiveGame() {
+      const selectedGame = currentGameSelect ? currentGameSelect.value : 'deadlock';
+      const items = actionsListContainer.querySelectorAll('.action-item');
+      items.forEach((item) => {
+        const gameSelect = item.querySelector('.action-game');
+        if (gameSelect) {
+          const actionGame = gameSelect.value;
+          if (actionGame === 'all' || actionGame === selectedGame) {
+            item.style.display = 'flex';
+          } else {
+            item.style.display = 'none';
+          }
+        }
+      });
+      
+      const visibleItems = Array.from(items).filter(item => item.style.display !== 'none');
+      let noActionsMsg = document.getElementById('no-actions-msg');
+      if (visibleItems.length === 0) {
+        if (!noActionsMsg) {
+          noActionsMsg = document.createElement('div');
+          noActionsMsg.id = 'no-actions-msg';
+          noActionsMsg.style.textAlign = 'center';
+          noActionsMsg.style.color = 'var(--text-muted)';
+          noActionsMsg.style.padding = '20px';
+          noActionsMsg.textContent = 'Нет настроенных действий для этой игры. Создайте новое!';
+          actionsListContainer.appendChild(noActionsMsg);
+        }
+      } else {
+        if (noActionsMsg) {
+          noActionsMsg.remove();
+        }
+      }
+    }
+
+    // Add new Action
+    addActionBtn.addEventListener('click', () => {
+      const selectedGame = currentGameSelect ? currentGameSelect.value : 'deadlock';
+      const newAction = {
+        id: 'action-' + Date.now(),
+        name: 'Новый триггер',
+        minAmount: 50,
+        currency: 'RUB',
+        keyword: '',
+        type: 'youtube',
+        game: selectedGame,
+        youtubeQuery: '',
+        youtubeVideoUrl: '',
+        command: '',
+        crazyKey: '',
+        normalKey: '',
+        durationMs: 5000,
+        keys: '',
+        streamerBotAction: '',
+        enabled: true
+      };
+      
+      actions.push(newAction);
+      renderActions();
+    });
+
+    // Simulate Donation Action with Countdown
+    let simTimeoutId = null;
+    let simIntervalId = null;
+
+    simulateBtn.addEventListener('click', async () => {
+      // If a countdown is already running, click cancels it
+      if (simTimeoutId) {
+        clearTimeout(simTimeoutId);
+        clearInterval(simIntervalId);
+        simTimeoutId = null;
+        simIntervalId = null;
+        simulateBtn.innerHTML = '🚀 Запустить тест';
+        simulateBtn.className = 'btn btn-success';
+        return;
+      }
+
+      const amount = Number(document.getElementById('sim-amount').value);
+      const username = document.getElementById('sim-username').value;
+      const message = document.getElementById('sim-message').value;
+      const delay = Number(document.getElementById('sim-delay').value) || 0;
+
+      const triggerTest = async () => {
+        try {
+          const response = await fetch('/api/test-donation', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount, username, message })
+          });
+          const res = await response.json();
+          if (res.success) {
+            console.log('Simulation requested');
+          }
+        } catch (err) {
+          alert('Ошибка симуляции: ' + err.message);
+        } finally {
+          simulateBtn.innerHTML = '🚀 Запустить тест';
+          simulateBtn.className = 'btn btn-success';
+          simTimeoutId = null;
+          simIntervalId = null;
+        }
+      };
+
+      if (delay > 0) {
+        let secondsLeft = delay;
+        simulateBtn.className = 'btn btn-danger';
+        simulateBtn.innerHTML = `⏱️ Запуск через ${secondsLeft} сек (Отмена)`;
+        
+        simIntervalId = setInterval(() => {
+          secondsLeft--;
+          if (secondsLeft > 0) {
+            simulateBtn.innerHTML = `⏱️ Запуск через ${secondsLeft} сек (Отмена)`;
+          } else {
+            clearInterval(simIntervalId);
+          }
+        }, 1000);
+
+        simTimeoutId = setTimeout(triggerTest, delay * 1000);
+      } else {
+        await triggerTest();
+      }
+    });
+
+    // Poll status and logs
+    async function updateStatusAndLogs() {
+      try {
+        const response = await fetch('/api/status');
+        const data = await response.json();
+
+        // Update status dot & text
+        statusText.textContent = translateState(data.connectionState);
+        statusDot.className = 'status-dot';
+        if (data.connectionState === 'Connected') {
+          statusDot.classList.add('connected');
+        } else if (data.connectionState === 'Connecting') {
+          statusDot.classList.add('connecting');
+        } else if (data.connectionState === 'Error') {
+          statusDot.classList.add('error');
+        }
+
+        // Update profile card
+        if (data.profile) {
+          profileContainer.style.display = 'flex';
+          profileAvatar.src = data.profile.avatar || '';
+          profileName.textContent = data.profile.name || 'Streamer';
+        } else {
+          profileContainer.style.display = 'none';
+        }
+
+        // Render logs
+        renderLogs(data.logs);
+
+      } catch (err) {
+        console.error('Failed to get status:', err);
+      }
+    }
+
+    function translateState(state) {
+      switch(state) {
+        case 'Connected': return 'Подключено';
+        case 'Connecting': return 'Подключение...';
+        case 'Disconnected': return 'Отключено';
+        case 'Error': return 'Ошибка';
+        default: return state;
+      }
+    }
+
+    function renderLogs(logs) {
+      if (!logs || logs.length === 0) {
+        logsContainer.innerHTML = '<div class="log-line"><span class="log-time">--:--:--</span> <span class="log-msg">Логов нет.</span></div>';
+        return;
+      }
+
+      logsContainer.innerHTML = logs.map((log) => {
+        return `<div class="log-line ${log.type}">
+          <span class="log-time">[${log.timestamp}]</span>
+          <span class="log-msg">${log.message}</span>
+        </div>`;
+      }).join('');
+    }
+
+    clearLogsBtn.addEventListener('click', () => {
+      // Log clean up is in frontend state for presentation
+      logsContainer.innerHTML = '<div class="log-line"><span class="log-time">--:--:--</span> <span class="log-msg">Лог очищен на клиенте.</span></div>';
+    });
+
+    // Initialization
+    loadConfig();
+    setInterval(updateStatusAndLogs, 2000);
+    updateStatusAndLogs();
+
+  </script>
+</body>
+</html>
